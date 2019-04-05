@@ -1,0 +1,1310 @@
+	#include <Servo.h>
+
+
+	//#include <QSerial.h>
+	//Movement
+	#
+	define turnSpeed 100# define stopDistance 3# define reverseDistance 10# define reverseTime 1000# define directionRight 4# define powerRight 5# define directionLeft 7# define powerLeft 6# define newButtonOne 3# define newButtonTwo 9
+	//#define dropOffDistance 600 nightime
+
+	//#define dropOffDistance 700
+
+	//IR Sensor
+	# define IRSensor A1
+
+	//Push button to start robot
+	# define buttonOne 12 //Eric 
+
+	//Servo Connections
+	# define tiltServoPin 10 //Tilt pin
+	# define gripServoPin 8 //Gripper pin
+	# define panServoPin 13 //Pan Pin
+	//#define gripSensorPin 11 //Force Sensor
+	# define gripSensorPin A0 //force pin
+
+	//Line Sensor
+	# define lineRightPin A4# define lineMiddlePin A5# define lineLeftPin A3
+
+	//Line Thresholds
+	# define lThresh 850 //Eric's robot
+	//#define lThresh 900 //Quentin's robot
+	//#define lThresh //Nick's robot
+
+	//Line sensor variables
+	int leftLine, middleLine, rightLine, backLine = 0;
+
+	int lastMistake = 0; //if the robot was  travelling too left or too right during it's last attempt  0 for left, 1 for right
+	int ER = 0; //if the the robot was on rightTravel or leftLeft, and then got off the lines all together. 1 for potential emergecy, 0 for no emergeny
+	int slight = 1;
+
+	int straightRWheel = 110; //known straight right value
+	int straightLWheel = 110; // known straight left value
+
+	//Values for straight line recorrection
+	int slightLeftLW = straightLWheel - 10;
+	int slightLeftRW = straightRWheel + 10;
+	int slightRightLW = straightLWheel + 10;
+	int slightRightRW = straightRWheel - 10;
+
+	//normal start
+	int leftLW = straightLWheel - 20;
+	int leftRW = straightRWheel + 20;
+
+	int rightLW = straightLWheel + 20;
+	int rightRW = straightRWheel - 20;
+	int passed = 0; //to indicate when the horz line has been passed
+	//normal end
+
+	long duration;
+	int distance;
+
+	int rightSpeed;
+	int leftSpeed;
+
+	int goneTooFarLeft = 0;
+
+	int goneTooFarRight = 0;
+
+	int slowest = 70;
+
+	int location = 0;
+
+	int pos = 0;
+
+	//IR SENSOR
+
+	int leftIR = 0;
+	int middleIR = 0;
+	int rightIR = 0;
+
+	int stateThreshold = 100;
+
+	int adjust = 0;
+
+	Servo gripServo, tiltServo, panServo;
+
+	void setup() {
+	  //Serial.begin(115200); //old bluetooth module
+	  Serial.begin(9600);
+
+	  //attach arm pins
+	  gripServo.attach(gripServoPin); //attaches pin to grip
+	  tiltServo.attach(tiltServoPin); //attaches pin to tilt
+	  panServo.attach(panServoPin); //attaches pin to tilt
+
+	  pinMode(gripSensorPin, INPUT); //Sets up force sensor
+	  pinMode(newButtonOne, INPUT); //Sets up force sensor
+
+	  //Directions
+	  pinMode(directionRight, INPUT);
+	  pinMode(directionLeft, INPUT);
+
+	  //Power of motors
+	  pinMode(powerRight, INPUT);
+	  pinMode(powerLeft, INPUT);
+
+	  pinMode(lineRightPin, INPUT);
+	  pinMode(lineMiddlePin, INPUT);
+	  pinMode(lineLeftPin, INPUT);
+
+	  pinMode(buttonOne, INPUT);
+
+	  pinMode(newButtonTwo, INPUT);
+
+	  int a = digitalRead(buttonOne);
+	  Serial.println(a);
+	  while (a == 0) {
+	    a = digitalRead(buttonOne);
+	    Serial.println(a);
+	  }
+	  gripServo.write(70);
+	  tiltServo.write(70);
+	  panServo.write(94); //erics robot starting position-servo
+
+	  analogWrite(powerLeft, 0);
+	  analogWrite(powerRight, 0);
+
+	  delay(2000);
+	}
+
+	void turn(int angle, int pace);
+	void pickUp();
+	void goForGoal();
+	void posOneGo();
+	void posTwoGo();
+	void posThreeGo();
+
+	void turn180(int pace);
+	int pathFinished = 0;
+
+	#
+	define dropOffDistance 600# define stopDistanceIR 500 //435
+	# define reverseDistanceDropOff 350# define reverseDistanceIR 350
+
+	void loop() {
+
+	  posThreeGo();
+
+	  int posOneB = digitalRead(newButtonOne);
+
+	  int posTwoB = digitalRead(buttonOne);
+
+	  int posThreeB = digitalRead(newButtonTwo);
+
+	  //Serial.println(posThreeB);
+
+	  if (posOneB == 0) {
+	    Serial.println("One");
+	    posOneGo();
+	    posOneGo();
+	    posOneGo();
+
+	  }
+
+	  if (posTwoB == 1) {
+	    Serial.println("Two");
+	    posTwoGo();
+	    posTwoGo();
+	    posTwoGo();
+	  }
+
+	  if (posThreeB == 0) {
+	    Serial.println("Three");
+	    posThreeGo();
+	    posThreeGo();
+	    posThreeGo();
+	  }
+
+	}
+	Bluetooth
+
+	voidcheckBluetooth() {
+	  void kill();
+
+	  void posOne(int x);
+	  void posTwo(int x);
+
+	  int checkAvailable = Serial.available();
+	  int checkRead = Serial.read();
+
+	  //  Serial.print("The input value is: ");
+	  // Serial.println(checkRead);
+	  //    if(checkAvailable > 0 && checkRead == 'A'){
+	  //      Serial.println("A");
+	  //    }
+
+	  if (checkAvailable > 0 && checkRead == '1') {
+	    Serial.println("POS ONE");
+	    //testStraight();
+	    posOneGo();
+	    pos = 1;
+
+	  } else if (checkAvailable > 0 && checkRead == '2') {
+	    Serial.println("POS TWO");
+	    posTwoGo();
+	    pos = 2;
+	  } else if (checkAvailable > 0 && checkRead == '3') {
+	    Serial.println("POS THREE");
+	    posThreeGo();
+	    pos = 3;
+	  } else if (checkAvailable > 0 && checkRead == 'k') {
+	    kill();
+	    while (true) {
+
+	      int checkAvailable = Serial.available();
+	      int checkRead = Serial.read();
+	      if (checkAvailable > 0 && checkRead == 'g') {
+	        break;
+	        delay(100);
+	      }
+	    }
+	  } else if (checkAvailable > 0 && pos == 1) {
+	    switch (checkRead) {
+	    case 'A':
+	      Serial.println("1A");
+	      //testStraight();
+	      posOne(1);
+	      break;
+	    case 'B':
+	      Serial.println("1B");
+	      posOne(2);
+	      break;
+	    case 'C':
+	      Serial.println("1C");
+	      posOne(3);
+
+	      break;
+	    case 'D':
+	      Serial.println("1D");
+	      posOne(4);
+	      break;
+	    case 'E':
+	      Serial.println("POS E");
+	      posOne(5);
+	      break;
+	    case 'F':
+	      Serial.println("POS F");
+	      posOne(6);
+	      break;
+	    case 'G':
+	      posOne(7);
+	      break;
+	    case 'H':
+	      posOne(8);
+	      break;
+	    case 'I':
+	      posOne(9);
+	      break;
+	    case 'J':
+	      posOne(10);
+	      break;
+	    case 'K':
+	      posOne(11);
+	      break;
+	    case 'L':
+	      posOne(12);
+	      break;
+	    case 'M':
+	      posOne(13);
+	      break;
+	    case 'N':
+	      posOne(14);
+	      break;
+	    case 'O':
+	      posOne(15);
+	      break;
+
+	    }
+	  } else if (checkAvailable > 0 && pos == 2) {
+	    switch (checkRead) {
+	    case 'A':
+	      Serial.println("2A");
+	      posTwo(1);
+	      break;
+	    case 'B':
+	      Serial.println("2B");
+	      posTwo(2);
+	      break;
+	    case 'C':
+	      posTwo(3);
+	      break;
+	    case 'D':
+	      posTwo(4);
+	      break;
+	    case 'E':
+	      posTwo(5);
+	      break;
+	    case 'F':
+	      posTwo(6);
+	      break;
+	    case 'G':
+	      posTwo(7);
+	      break;
+	    case 'H':
+	      posTwo(8);
+	      break;
+	    case 'I':
+	      posTwo(9);
+	      break;
+	    case 'J':
+	      posTwo(10);
+	      break;
+	    case 'K':
+	      posTwo(11);
+	      break;
+	    case 'L':
+	      posTwo(12);
+	      break;
+	    case 'M':
+	      posTwo(13);
+	      break;
+	    case 'N':
+	      posTwo(14);
+	      break;
+	    case 'O':
+	      posTwo(15);
+	      break;
+
+	    }
+
+	  } else if (checkAvailable > 0 && pos == 3) {
+	    switch (checkRead) {
+	    case 'A':
+	      Serial.println("3A");
+
+	      posThree(1);
+	      break;
+	    case 'B':
+	      Serial.println("3B");
+	      posThree(2);
+
+	      break;
+	    case 'C':
+	      Serial.println("3C");
+	      posThree(3);
+
+	      break;
+	    case 'D':
+	      Serial.println("3D");
+	      posThree(4);
+	      break;
+	    case 'E':
+	      posThree(5);
+	      break;
+	    case 'F':
+	      posThree(6);
+	      break;
+	    case 'G':
+	      posThree(7);
+	      break;
+	    case 'H':
+	      posThree(8);
+	      break;
+	    case 'I':
+	      posThree(9);
+	      break;
+	    case 'J':
+	      posThree(10);
+	      break;
+	    case 'K':
+	      posThree(11);
+	      break;
+	    case 'L':
+	      posThree(12);
+	      break;
+	    case 'M':
+	      posThree(13);
+	      break;
+	    case 'N':
+	      Serial.println("3N");
+	      posThree(14);
+	      break;
+	    case 'O':
+	      Serial.println("30");
+	      posThree(15);
+	      break;
+
+	    }
+
+	  }
+
+	}
+	Grid Movement
+
+	void goStraight(bool dir);
+	//increment blocks, int blocks (amount of blocks to increment)
+	void IB(int blocks) {
+	  //Serial.println("In increment one block");
+	  for (int i = 0; i < blocks; i++) {
+	    goStraight(HIGH, HIGH);
+	    //delay(200); //time to get the backline sensor off of the tape
+	    while (true) {
+
+	      goStraight(HIGH, LOW);
+	      int LC = getLinesCrossed();
+
+	      if (LC >= 2) {
+	        passed = 1;
+	        // Serial.println("Passed the line");
+
+	      }
+	      if (passed == 1) {
+	        delay(400);
+	        //Serial.println("incremented one block");
+	        passed = 0; //reset for next time
+	        break;
+	      }
+	    }
+	  }
+	}
+
+	void goDistanceIR(int x) {
+	  while (true) {
+	    int distance = analogRead(IRSensor);
+
+	    //Serial.println(distance);
+	    goStraight(HIGH, LOW);
+	    if (distance >= x) {
+	      kill();
+	      // Serial.println("Finished Forwards");
+	      break;
+	    }
+	  }
+
+	}
+
+	void goReverseIR(int x) {
+
+	  while (true) {
+	    Serial.println(distance);
+	    distance = analogRead(IRSensor);
+	    Serial.println(distance);
+
+	    goStraight(LOW, LOW);
+	    if (distance <= x) {
+
+	      kill();
+	      //Serial.println("Finished Backwards");
+
+	      break;
+	    }
+	  }
+
+	}
+
+	int getLinesCrossed() {
+	  getLines();
+	  int LC = 0;
+	  if (leftLine > lThresh)
+	    LC++;
+
+	  if (middleLine > lThresh)
+	    LC++;
+
+	  if (rightLine > lThresh)
+	    LC++;
+
+	  //Serial.print("Lines crossed:");
+	  //Serial.println(LC);
+	  return LC;
+
+	}
+
+	void reverseForTime(int x) {
+
+	  digitalWrite(directionRight, LOW);
+	  digitalWrite(directionLeft, LOW);
+
+	  analogWrite(powerLeft, straightLWheel);
+	  analogWrite(powerRight, straightRWheel);
+
+	  delay(x);
+	  kill();
+	}
+	Instructions
+	void sideGoForCloseSide(int level, int pos) {
+	  //level = number of increments
+	  //dir = left or right, HIGH = left, LOW = right
+	  //pos = starting position, 1 = left, 3 = right
+	  IB(level);
+	  if (pos == 1) {
+	    turn(-90, turnSpeed);
+	  } else {
+	    turn(90, turnSpeed);
+	  }
+	  IB(1);
+	  pickUp();
+	  goReverseIR(reverseDistanceIR);
+	  turn180(turnSpeed);
+	  IB(1);
+	  if (pos == 1) {
+	    turn(90, turnSpeed);
+	  } else {
+	    turn(-90, turnSpeed);
+
+	  }
+	  IB(level - 1);
+	  goForGoal();
+	  turn(90, turnSpeed);
+	}
+
+	void sideGoForFarSide(int level, int pos) {
+
+	  IB(level);
+	  if (pos == 1) {
+	    turn(90, turnSpeed);
+	  } else {
+	    turn(-90, turnSpeed);
+	  }
+	  IB(3);
+
+	  pickUp();
+	  goReverseIR(reverseDistanceIR);
+	  turn180(turnSpeed);
+	  IB(3);
+	  if (pos == 1) {
+	    turn(-90, turnSpeed);
+	  } else {
+	    turn(90, turnSpeed);
+	  }
+	  int newLevel = level - 1;
+	  if (newLevel > 0) {
+	    //Serial.println("HEEEREE");
+	    IB(newLevel);
+	  }
+
+	  goForGoal();
+	  turn(90, turnSpeed);
+	}
+	Get lines
+
+	void getLines() {
+
+	  leftLine = analogRead(lineLeftPin);
+	  middleLine = analogRead(lineMiddlePin);
+	  rightLine = analogRead(lineRightPin);
+	}
+	Movement
+
+	void goStraight(bool dir, bool IB) {
+	  getLines();
+	  //checkBluetooth();
+
+	  digitalWrite(directionRight, dir);
+	  digitalWrite(directionLeft, dir);
+	  //Serial.println(" go straight ");
+	  // Serial.println(" HEERE ");
+
+	  /* if(IB ==HIGH){
+	   
+	    int distance = analogRead(IRSensor);
+	   while(distance>250){
+	    kill();
+	     distance = analogRead(IRSensor);
+	
+	   }
+	
+	  }*/
+
+	  if (middleLine > lThresh) {
+	    straight();
+	    // Serial.println(" go straight ");
+
+	  } else if (leftLine < lThresh && middleLine < lThresh && rightLine < lThresh) {
+	    if (lastMistake == 0) {
+
+	      //Serial.println("slight right");
+	    } else {
+	      slightLeft();
+	      //Serial.println("slight left");
+	    }
+
+	  } else if (leftLine > lThresh) {
+	    left();
+	    //Serial.println("left");
+	    lastMistake = 1;
+	  } else if (rightLine > lThresh) {
+	    right();
+	    //Serial.println(" right");
+	    lastMistake = 0;
+	  }
+
+	}
+
+	void straight() {
+	  analogWrite(powerLeft, straightLWheel);
+	  analogWrite(powerRight, straightRWheel);
+	}
+
+	void slightLeft() {
+	  analogWrite(powerLeft, slightLeftLW);
+	  analogWrite(powerRight, slightLeftRW);
+	}
+	void slightRight() {
+	  analogWrite(powerLeft, slightRightLW);
+	  analogWrite(powerRight, slightRightRW);
+	}
+
+	void left() {
+	  analogWrite(powerLeft, leftLW);
+	  analogWrite(powerRight, leftRW);
+	}
+
+	void right() {
+	  analogWrite(powerLeft, rightLW);
+	  analogWrite(powerRight, rightRW);
+
+	}
+
+	void kill() {
+	  analogWrite(powerLeft, 0);
+	  analogWrite(powerRight, 0);
+	}
+
+	Position One
+
+	void posOneGo() {
+	  Serial.println("in Pos one");
+	  posOne(2);
+	  posOne(7);
+	  posOne(11);
+	  posOne(5);
+	  posOne(6);
+	}
+
+	void posOne(int x) {
+
+	  switch (x) {
+
+	  case 1:
+	    sideGoForCloseSide(1, 1);
+	    break;
+	  case 2:
+	    sideGoForCloseSide(2, 1);
+	    break;
+	  case 3:
+	    sideGoForCloseSide(3, 1);
+	    break;
+	  case 4:
+	    sideGoForCloseSide(4, 1);
+	    break;
+	  case 5:
+	    sideGoForCloseSide(5, 1);
+	    break;
+	  case 6:
+	    posOneCaseSix();
+	    break;
+	  case 7:
+	    posOneCaseSeven();
+	    break;
+
+	  case 8:
+	    posOneFarRight(1);
+	    break;
+
+	  case 9:
+	    posOneFarRight(2);
+	    break;
+
+	  case 10:
+	    posOneFarRight(3);
+	    break;
+
+	  case 11:
+	    sideGoForFarSide(5, 1);
+	    break;
+	  case 12:
+	    sideGoForFarSide(4, 1);
+	    break;
+	  case 13:
+	    sideGoForFarSide(3, 1);
+	    break;
+	  case 14:
+	    sideGoForFarSide(2, 1);
+	    break;
+	  case 15:
+	    posOneCaseFifteen();
+	    break;
+
+	  }
+	}
+
+	void posOneCaseSix() {
+	  IB(5);
+
+	  turn(-90, turnSpeed);
+	  IB(1);
+	  turn(90, turnSpeed);
+
+	  pickUp();
+	  goReverseIR(reverseDistanceIR);
+	  turn180(turnSpeed);
+	  turn(-90, turnSpeed);
+	  IB(1);
+	  turn(90, turnSpeed);
+	  goForGoal();
+	  turn(90, turnSpeed);
+	}
+
+	void posOneCaseSeven() {
+	  IB(5);
+
+	  pickUp();
+	  goReverseIR(reverseDistanceIR);
+	  turn180(turnSpeed);
+	  goForGoal();
+	  turn(90, turnSpeed);
+	}
+
+	void posOneFarRight(int x) {
+	  IB(5);
+	  turn(90, turnSpeed);
+	  IB(x);
+	  turn(-90, turnSpeed);
+	  pickUp();
+	  goReverseIR(reverseDistanceIR);
+	  turn180(turnSpeed);
+	  turn(90, turnSpeed);
+	  IB(x);
+	  turn(-90, turnSpeed);
+	  IB(x - 1);
+	  goForGoal();
+	  turn(90, turnSpeed);
+	}
+
+	void posOneCaseFifteen() {
+
+	  IB(1);
+	  turn(90, turnSpeed);
+
+	  pickUp();
+	  goReverseIR(reverseDistanceIR);
+	  turn(-90, turnSpeed);
+	  turn(-90, turnSpeed);
+
+	  IB(3);
+	  turn(-90, turnSpeed);
+	  goForGoal();
+	  turn(90, turnSpeed);
+
+	}
+
+	Position Two
+
+	void posTwoGo() {
+	  Serial.println("in Pos two");
+	  posTwo(8);
+	  posTwo(4);
+	  posTwo(15);
+	  posTwo(10);
+	  posTwo(12);
+
+	}
+	void posTwo(int x) {
+	  switch (x) {
+
+	  case 1:
+	    middleGoForSide(1, 1);
+	    break;
+	  case 2:
+	    middleGoForSide(2, 1);
+	    break;
+	  case 3:
+	    middleGoForSide(3, 1);
+	    break;
+
+	  case 4:
+	    middleGoForSide(4, 1);
+	    break;
+
+	  case 5:
+	    middleGoForSide(5, 1);
+	    break;
+
+	  case 6:
+	    middleGoForFar(2, 1);
+	    break;
+
+	  case 7:
+	    middleGoForFar(1, 1);
+	    break;
+
+	  case 8:
+	    posThreeCase9(); //this is okay
+	    break;
+
+	  case 9:
+	    middleGoForFar(1, 0);
+	    break;
+
+	  case 10:
+	    middleGoForFar(2, 0);
+	    break;
+
+	  case 11:
+	    middleGoForSide(5, 0);
+	    break;
+
+	  case 12:
+	    middleGoForSide(4, 0);
+	    break;
+
+	  case 13:
+	    middleGoForSide(3, 0);
+	    break;
+
+	  case 14:
+	    middleGoForSide(2, 0);
+	    break;
+
+	  case 15:
+	    middleGoForFifteen();
+	    break;
+
+	  }
+	}
+
+	void middleGoForSide(int x, bool dir) {
+
+	  IB(x);
+
+	  if (dir == HIGH) {
+	    turn(-90, turnSpeed);
+	  } else if (dir == LOW) {
+	    turn(90, turnSpeed);
+	  }
+
+	  IB(2);
+	  pickUp();
+	  turn180(turnSpeed);
+	  IB(2);
+
+	  if (dir == HIGH) {
+	    turn(90, turnSpeed);
+	  } else if (dir == LOW) {
+	    turn(-90, turnSpeed);
+	  }
+
+	  IB(x - 1);
+
+	  goForGoal();
+
+	  turn(90, turnSpeed);
+	}
+
+	void middleGoForFifteen() {
+
+	  IB(1);
+	  turn(90, turnSpeed);
+	  IB(2);
+	  pickUp();
+
+	  turn(-90, turnSpeed);
+	  turn(-90, turnSpeed);
+	  IB(2);
+	  turn(-90, turnSpeed);
+	  goForGoal();
+	  turn(90, turnSpeed);
+
+	}
+
+	void middleGoForFar(int x, bool dir) {
+
+	  IB(5);
+
+	  if (dir == HIGH) {
+	    turn(-90, turnSpeed);
+	  } else if (dir == LOW) {
+	    turn(90, turnSpeed);
+	  }
+
+	  IB(x);
+
+	  if (dir == HIGH) {
+	    turn(90, turnSpeed);
+	  } else if (dir == LOW) {
+	    turn(-90, turnSpeed);
+	  }
+
+	  pickUp();
+	  turn180(turnSpeed);
+
+	  if (dir == HIGH) {
+	    turn(-90, turnSpeed);
+	  } else if (dir == LOW) {
+	    turn(90, turnSpeed);
+	  }
+
+	  IB(x);
+
+	  if (dir == HIGH) {
+	    turn(90, turnSpeed);
+	  } else if (dir == LOW) {
+	    turn(-90, turnSpeed);
+	  }
+
+	  IB(4);
+
+	  goForGoal();
+
+	  turn(-90, turnSpeed);
+
+	}
+
+	Position Three
+
+	void posThreeGo() {
+	  Serial.println("in Pos three");
+
+	  posThree(14);
+	  posThree(9);
+	  posThree(1);
+	  posThree(13);
+	  posThree(3);
+
+	}
+	void posThree(int x) {
+	  switch (x) {
+	  case 1:
+	    sideGoForFarSide(1, 1);
+	    break;
+	  case 2:
+	    sideGoForFarSide(2, 1);
+	    break;
+	  case 3:
+	    sideGoForFarSide(3, 1);
+	    break;
+	  case 4:
+	    sideGoForFarSide(4, 1);
+	    break;
+	  case 5:
+	    sideGoForFarSide(5, 1);
+	    break;
+
+	  case 6:
+	    posThreeFarLeft(3);
+	    break;
+	  case 7:
+	    posThreeFarLeft(2);
+	    break;
+
+	  case 8:
+	    posThreeFarLeft(1);
+	    break;
+
+	  case 9:
+	    posThreeCase9();
+	    break;
+	  case 10:
+	    posThreeCase10();
+	    break;
+	  case 11:
+	    sideGoForCloseSide(5, 0);
+	    break;
+	  case 12:
+	    sideGoForCloseSide(4, 0);
+	    break;
+	  case 13:
+	    sideGoForCloseSide(3, 0);
+	    break;
+	  case 14:
+	    sideGoForCloseSide(2, 0);
+	    break;
+	  case 15:
+	    posThreeCase15();
+	    break;
+
+	  }
+	}
+
+	void posThreeCase15() {
+
+	  //level = number of increments
+	  //dir = left or right, HIGH = left, LOW = right
+	  //pos = starting position, 1 = left, 3 = right
+	  IB(1);
+
+	  turn(90, turnSpeed);
+
+	  IB(1);
+	  pickUp();
+	  goReverseIR(reverseDistanceIR);
+	  turn(-90, turnSpeed);
+	  turn(-90, turnSpeed);
+
+	  IB(1);
+	  turn(-90, turnSpeed);
+
+	  goForGoal();
+
+	  turn(90, turnSpeed);
+	}
+
+	void posThreeCase10() {
+	  IB(5);
+
+	  turn(90, turnSpeed);
+	  IB(1);
+	  turn(-90, turnSpeed);
+
+	  pickUp();
+	  goReverseIR(reverseDistanceIR);
+	  turn180(turnSpeed);
+	  turn(90, turnSpeed);
+	  IB(1);
+	  turn(-90, turnSpeed);
+	  IB(4);
+	  goForGoal();
+	  turn(90, turnSpeed);
+	}
+
+	void posThreeCase9() {
+	  IB(5);
+
+	  pickUp();
+	  goReverseIR(reverseDistanceIR);
+	  turn180(turnSpeed);
+	  IB(4);
+	  goForGoal();
+	  turn(90, turnSpeed);
+	}
+
+	void posThreeFarLeft(int x) {
+
+	  IB(5);
+	  turn(-90, turnSpeed);
+	  IB(x);
+	  turn(90, turnSpeed);
+	  pickUp();
+	  goReverseIR(reverseDistanceIR);
+	  turn180(turnSpeed);
+	  turn(-90, turnSpeed);
+	  IB(x);
+	  turn(90, turnSpeed);
+	  IB(4);
+	  goForGoal();
+	  turn(90, turnSpeed);
+	}
+
+	Robotic Arm
+
+	void grab() {
+	  int mistakes = 0;
+	  int finished = 0;
+	  //To do: program arm to pick up the ball
+	  tiltServo.write(58);
+	  //int gripSensor = digitalRead(gripSensorPin); //reads the pressure on the grip sensor
+	  while (finished == 0) {
+	    for (int i = 70; i < 180; i += 1) { // starts off as open, gradually closes and stops when sense the rubber ball
+	      delay(15);
+	      gripServo.write(i); //changes angle on the grip to close
+
+	      int gripSensor = analogRead(gripSensorPin); //reads the grip Sensor pressure
+	      if (gripSensor > 1020) { //it senses the pressure
+	        //Serial.println("HEEERRREEE");
+	        finished = 1;
+	        break; //Stops the loop
+	      }
+	    }
+
+	    if (finished == 0) {
+	      if (mistakes == 0 || mistakes == 1 || mistakes == 2 || mistakes == 3 || mistakes == 5 || mistakes == 7) {
+	        analogWrite(powerLeft, straightLWheel);
+	        analogWrite(powerRight, straightRWheel);
+	      } else {
+	        analogWrite(powerLeft, straightLWheel);
+	        analogWrite(powerRight, straightRWheel);
+	        digitalWrite(directionRight, LOW);
+	        digitalWrite(directionLeft, LOW);
+
+	      }
+	      mistakes += 1;
+	      delay(200);
+	      kill();
+	      digitalWrite(directionRight, HIGH);
+	      digitalWrite(directionLeft, HIGH);
+	    }
+	    if (mistakes == 7) {
+	      finished = 1;
+	    }
+	  }
+	}
+
+	void dropBall() {
+	  //To do : program the arm to drop the ball
+	  tiltServo.write(70);
+	  gripServo.write(70);
+
+	}
+
+	void pickUp() {
+
+	  goDistanceIR(stopDistanceIR);
+	  grab();
+	  tiltServo.write(140);
+	  goReverseIR(reverseDistanceIR);
+
+	}
+
+	void goForGoal() {
+
+	  goDistanceIR(dropOffDistance);
+	  dropBall();
+	  goReverseIR(reverseDistanceDropOff);
+
+	  //to do add dropoff
+	}
+
+	Turn
+
+	void turn(int angle, int pace) {
+	  // Serial.println("-------------------");
+
+	  int side;
+	  int sideDone = 0;
+	  int finished = 0;
+	  int farSide = 0;
+	  //int turn =0;
+
+	  bool rightDir, leftDir;
+	  if (angle == 90) {
+	    rightDir = LOW;
+	    leftDir = HIGH;
+
+	  }
+
+	  if (angle == -90) {
+	    rightDir = HIGH;
+	    leftDir = LOW;
+
+	  }
+	  digitalWrite(directionRight, rightDir);
+	  digitalWrite(directionLeft, leftDir);
+	  analogWrite(powerRight, pace);
+	  analogWrite(powerLeft, pace);
+
+	  delay(300); //time to get off of the lines
+	  while (true) {
+	    getLines();
+	    if (angle == 90) {
+
+	      side = rightLine;
+	      farSide = leftLine;
+
+	    } else {
+
+	      side = leftLine;
+	      farSide = rightLine;
+	    }
+
+	    if (sideDone == 0) {
+	      if (side > lThresh) {
+
+	        sideDone = 1;
+	        Serial.println("A");
+
+	      }
+	    } else if (sideDone == 1) {
+	      if (side < lThresh) {
+	        analogWrite(powerRight, pace);
+	        analogWrite(powerLeft, pace);
+	        Serial.println("B ");
+	        sideDone += 1;
+	        break;
+
+	      }
+	    } else if (sideDone == 2) {
+	      if (middleLine > lThresh) {
+	        analogWrite(powerRight, pace);
+	        analogWrite(powerLeft, pace);
+	        Serial.println("C");
+	        sideDone += 1;
+	        break;
+
+	      }
+	    } else if (sideDone == 3) {
+	      if (farSide > lThresh) {
+	        analogWrite(powerRight, 0);
+	        analogWrite(powerLeft, 0);
+	        Serial.println("D");
+	        sideDone += 1;
+	        break;
+	      }
+	    }
+
+	  }
+
+	  kill();
+	}
+
+	void turn180(int pace) {
+	  turn(90, pace);
+	  turn(90, pace);
+	}
+
+	Tests
+
+	void testStraight() {
+	  while (true) {
+
+	    digitalWrite(directionRight, HIGH);
+	    digitalWrite(directionLeft, HIGH);
+
+	    analogWrite(powerLeft, straightLWheel);
+	    analogWrite(powerRight, straightRWheel);
+	  }
+
+	}
+
+	void testBackwards() {
+	  while (true) {
+
+	    digitalWrite(directionRight, LOW);
+	    digitalWrite(directionLeft, LOW);
+
+	    analogWrite(powerLeft, straightLWheel);
+	    analogWrite(powerRight, straightRWheel);
+	  }
+
+	}
+
+	void testLines() {
+
+	  while (true) {
+	    getLines();
+	    Serial.print("left Line:");
+	    Serial.println(leftLine);
+
+	    Serial.print("middle Line:");
+	    Serial.println(middleLine);
+
+	    Serial.print("right Line:");
+	    Serial.println(rightLine);
+
+	    delay(2000);
+	  }
+	}
+
+	void setSpeedsToZero() {
+
+	  int straightRWheel = 0; //known straight right value
+	  int straightLWheel = 0; // known straight left value
+
+	  //slight start
+
+	  int slightLeftLW = 0;
+	  int slightLeftRW = 0;
+
+	  int slightRightLW = 0;
+	  int slightRightRW = 0;
+
+	  //slight end
+
+	  //normal start
+	  int leftLW = 0;
+	  int leftRW = 0;
+
+	  int rightLW = 0;
+	  int rightRW = 0;
+
+	  //normal end
+	}
+
+	void roundAndRound() {
+	  while (true) {
+	    IB(1);
+	    Serial.println("HERE");
+	    turn(90, turnSpeed);
+	  }
+
+	}
+
+	void testTilt() {
+	  while (true) {
+	    for (int i = 0; i < 150; i += 10) {
+	      tiltServo.write(i);
+	      delay(200);
+	    }
+
+	    for (int i = 150; i > 0; i -= 10) {
+	      tiltServo.write(i);
+	      delay(200);
+	    }
+	  }
+
+	}
+
+	void testGripper() {
+	  while (true) {
+	    for (int i = 0; i < 150; i += 10) {
+	      gripServo.write(i);
+	      delay(200);
+	    }
+
+	    for (int i = 150; i > 0; i -= 10) {
+	      gripServo.write(i);
+	      delay(200);
+	    }
+	  }
+
+	}
